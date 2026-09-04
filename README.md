@@ -87,18 +87,18 @@ Node.js
 npm
 PostgreSQL
 Redis
-⚡ Running the Project
+## **⚡ Running the Project **
 
 The project requires 3 terminals.
 
-Terminal 1 — Backend
+** Terminal 1 — Backend **
 cd backend
 npm install
 npm run dev
 
 This starts the Express backend server.
 
-Terminal 2 — BullMQ Worker
+** Terminal 2 — BullMQ Worker **
 
 Open a second terminal:
 
@@ -111,7 +111,7 @@ Email worker started
 
 The worker processes scheduled emails in the background.
 
-Terminal 3 — Frontend
+** Terminal 3 — Frontend **
 
 Open a third terminal:
 
