@@ -40,6 +40,81 @@ A full-stack email scheduling application that allows users to authenticate with
 - Cancel scheduled email
 - Responsive dark UI
 
+  🚀 How to Run the Project
+1. Start PostgreSQL and Redis
+
+Make sure PostgreSQL and Redis are running on your system.
+
+2. Start the Backend API
+
+Open a terminal:
+
+cd backend
+npm install
+npm run dev
+
+Backend will start in development mode.
+
+3. Start the BullMQ Email Worker
+
+⚠️ Open a SECOND terminal and run:
+
+cd backend
+npm run worker
+
+You should see:
+
+Email worker started
+
+The worker is responsible for processing scheduled emails in the background.
+
+4. Start the Frontend
+
+⚠️ Open a THIRD terminal:
+
+cd frontend
+npm install
+npm run dev
+
+Vite will display the frontend URL in the terminal, usually:
+
+http://localhost:5173
+
+Open that URL in your browser.
+
+⚡ Quick Start
+
+You need 3 terminals running:
+
+Terminal 1 — Backend
+
+cd backend
+npm run dev
+
+Terminal 2 — Email Worker
+
+cd backend
+npm run worker
+
+Terminal 3 — Frontend
+
+cd frontend
+npm run dev
+Running Architecture
+Terminal 1
+Backend API
+     │
+     ▼
+PostgreSQL + Redis
+     ▲
+     │
+Terminal 2
+BullMQ Email Worker
+     ▲
+     │
+Terminal 3
+Frontend
+
 ---
 
 # Architecture
