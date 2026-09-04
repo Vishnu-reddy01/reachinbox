@@ -40,7 +40,7 @@ A full-stack email scheduling application that allows users to authenticate with
 - Cancel scheduled email
 - Responsive dark UI
 
-  🚀 How to Run the Project
+###🚀 How to Run the Project
 1. Start PostgreSQL and Redis
 
 Make sure PostgreSQL and Redis are running on your system.
