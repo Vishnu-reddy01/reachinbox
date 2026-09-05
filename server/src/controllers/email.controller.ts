@@ -178,44 +178,54 @@ export const cancelEmailController = async (
       });
     }
 
-    if (email.status !== "SCHEDULED") {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot cancel email with status ${email.status}`,
+    // Scheduled email → cancel it and remove BullMQ job
+    if (email.status === "SCHEDULED") {
+      if (email.bullJobId) {
+        const job = await emailQueue.getJob(email.bullJobId);
+
+        if (job) {
+          await job.remove();
+        }
+      }
+
+      const updatedEmail = await prisma.email.update({
+        where: { id },
+        data: {
+          status: "CANCELLED",
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: "Email cancelled successfully",
+        emailId: updatedEmail.id,
+        status: updatedEmail.status,
       });
     }
 
-    // Remove the delayed BullMQ job
-    if (email.bullJobId) {
-      const job = await emailQueue.getJob(email.bullJobId);
+    // Sent or failed email → permanently delete it
+    if (email.status === "SENT" || email.status === "FAILED") {
+      await prisma.email.delete({
+        where: { id },
+      });
 
-      if (job) {
-        await job.remove();
-      }
+      return res.json({
+        success: true,
+        message: "Email deleted successfully",
+        emailId: id,
+      });
     }
 
-    // Update PostgreSQL
-    const updatedEmail = await prisma.email.update({
-      where: {
-        id,
-      },
-      data: {
-        status: "CANCELLED",
-      },
-    });
-
-    return res.json({
-      success: true,
-      message: "Email cancelled successfully",
-      emailId: updatedEmail.id,
-      status: updatedEmail.status,
+    return res.status(400).json({
+      success: false,
+      message: `Cannot modify email with status ${email.status}`,
     });
   } catch (error) {
-    console.error("Cancel email error:", error);
+    console.error("Email action error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to cancel email",
+      message: "Failed to modify email",
     });
   }
 };

@@ -14,3 +14,113 @@ body,
 body {
   font-family: Inter, Arial, sans-serif;
 }
+
+/* ================= LIGHT THEME ================= */
+
+.light-theme {
+  background: #f5f7fa !important;
+  color: #111827 !important;
+}
+
+/* Sidebar */
+.light-theme aside {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Header */
+.light-theme header {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Main cards / panels */
+.light-theme section,
+.light-theme main > div > div,
+.light-theme main > div > div > div {
+  border-color: #e5e7eb;
+}
+
+/* Dark backgrounds */
+.light-theme [class*="bg-[#0d1116]"],
+.light-theme [class*="bg-[#090b0f]"],
+.light-theme [class*="bg-[#090c10]"],
+.light-theme [class*="bg-[#10141a]"],
+.light-theme [class*="bg-[#11161c]"] {
+  background-color: #ffffff !important;
+}
+
+/* Slightly darker light backgrounds */
+.light-theme [class*="bg-[#141920]"],
+.light-theme [class*="bg-[#151a20]"],
+.light-theme [class*="bg-[#10151b]"],
+.light-theme [class*="bg-[#171c22]"] {
+  background-color: #f3f4f6 !important;
+}
+
+/* Borders */
+.light-theme [class*="border-[#1d2229]"],
+.light-theme [class*="border-[#20262e]"],
+.light-theme [class*="border-[#252c34]"],
+.light-theme [class*="border-[#293039]"],
+.light-theme [class*="border-[#303640]"],
+.light-theme [class*="border-[#242b34"] {
+  border-color: #e5e7eb !important;
+}
+
+/* White text -> dark text */
+.light-theme [class*="text-white"],
+.light-theme [class*="text-[#f3f4f6]"],
+.light-theme [class*="text-[#eef0f3]"],
+.light-theme [class*="text-[#e7e9ed]"],
+.light-theme [class*="text-[#e5e7eb]"],
+.light-theme [class*="text-[#dfe2e7]"],
+.light-theme [class*="text-[#d4d8de]"],
+.light-theme [class*="text-[#e3e6eb]"] {
+  color: #111827 !important;
+}
+
+/* Secondary text */
+.light-theme [class*="text-[#737b87]"],
+.light-theme [class*="text-[#707984]"],
+.light-theme [class*="text-[#68717d]"],
+.light-theme [class*="text-[#626b76]"],
+.light-theme [class*="text-[#626b77]"],
+.light-theme [class*="text-[#59626e]"],
+.light-theme [class*="text-[#59626d]"],
+.light-theme [class*="text-[#555d68]"],
+.light-theme [class*="text-[#555e69]"],
+.light-theme [class*="text-[#4f5661]"] {
+  color: #6b7280 !important;
+}
+
+/* Inputs */
+.light-theme input,
+.light-theme textarea {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Hover states */
+.light-theme [class*="hover\\:bg-[#11151b]"]:hover,
+.light-theme [class*="hover\\:bg-[#151a20]"]:hover,
+.light-theme [class*="hover\\:bg-[#171c22]"]:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Modal */
+.light-theme .fixed > div {
+  background-color: #ffffff;
+  border-color: #e5e7eb;
+}
+
+/* Sidebar active item */
+.light-theme [class*="bg-[#141920]"] {
+  background-color: #f3f4f6 !important;
+}
