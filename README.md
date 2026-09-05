@@ -171,7 +171,10 @@ Add the credentials to the backend .env.
 Start the backend and worker.
 Scheduled emails will be sent through Ethereal SMTP.
 The generated preview URL can be used to inspect test emails.
-## Backend Setup
+
+
+
+############################# Backend Setup ##############################
 cd backend
 npm install
 
@@ -186,7 +189,7 @@ Start the BullMQ worker using the project's worker command.
 Example:
 
 npm run worker
-## Frontend Setup
+############################ Frontend Setup #################################
 cd frontend
 npm install
 npm run dev
