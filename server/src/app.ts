@@ -5,15 +5,32 @@ import emailRoutes from "./routes/email.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  process.env.CLIENT_URL,
+].filter((origin): origin is string => Boolean(origin));
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-    ],
+    origin: (origin, callback) => {
+      // Allow requests without an Origin header
+      // (Postman, server-to-server requests, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 app.get("/", (_req, res) => {
@@ -30,7 +47,6 @@ app.get("/health", (_req, res) => {
     status: "healthy",
   });
 });
-
 
 app.post("/test-queue", async (_req, res) => {
   try {
@@ -58,6 +74,8 @@ app.post("/test-queue", async (_req, res) => {
     });
   }
 });
+
 app.use("/api/emails", emailRoutes);
 app.use("/api/auth", authRoutes);
+
 export default app;
