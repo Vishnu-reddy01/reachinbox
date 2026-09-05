@@ -344,12 +344,12 @@ function Dashboard({ user, onLogout }: DashboardProps) {
     try {
       const [scheduledResponse, sentResponse] = await Promise.all([
         fetch(
-          `${import.meta.env.VITE_API_URL}/emails/scheduled?senderEmail=${encodeURIComponent(
+          `${import.meta.env.VITE_API_URL}/api/emails/scheduled?senderEmail=${encodeURIComponent(
             user.email
           )}`
         ),
         fetch(
-          `${import.meta.env.VITE_API_URL}/emails/sent?senderEmail=${encodeURIComponent(
+          `${import.meta.env.VITE_API_URL}/api/emails/sent?senderEmail=${encodeURIComponent(
             user.email
           )}`
         ),
@@ -378,7 +378,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
       async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/emails/${emailId}`,
+            `${import.meta.env.VITE_API_URL}/api/emails/${emailId}`,
             {
               method: "DELETE",
             }
@@ -525,7 +525,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
     try {
       const response = await fetch(
-       `${import.meta.env.VITE_API_URL}/emails/schedule-bulk`,
+       `${import.meta.env.VITE_API_URL}/api/emails/schedule-bulk`,
         {
           method: "POST",
           headers: {
