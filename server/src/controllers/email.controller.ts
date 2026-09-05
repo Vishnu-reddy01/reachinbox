@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { scheduleEmail } from "../services/email.service.js";
 import prisma from "../config/database.js";
 import { emailQueue } from "../queues/email.queue.js";
+import { searchEmails, updateEmailIndex, deleteEmailIndex } from "../services/elasticsearch.service.js";
 
 export async function scheduleEmailController(
   req: Request,
@@ -120,26 +121,28 @@ export async function getSentEmails(
       });
     }
 
-    const emails = await prisma.email.findMany({
-      where: {
-  status: {
-    in: ["SENT", "FAILED"],
-  },
-  sender: {
-    email: senderEmail,
-  },
-},
-      include: {
-        sender: true,
-      },
-      orderBy: {
-        sentAt: "desc",
-      },
-    });
+    // Fetch SENT and FAILED separately so null sentAt values from failed
+    // records do not hide successfully sent messages at the top of the list.
+    const [sent, failed] = await Promise.all([
+      prisma.email.findMany({
+        where: { status: "SENT", sender: { email: senderEmail } },
+        include: { sender: true },
+        orderBy: { sentAt: "desc" },
+      }),
+      prisma.email.findMany({
+        where: { status: "FAILED", sender: { email: senderEmail } },
+        include: { sender: true },
+        orderBy: { updatedAt: "desc" },
+      }),
+    ]);
+
+    const emails = [...sent, ...failed];
 
     return res.json({
       success: true,
       count: emails.length,
+      sentCount: sent.length,
+      failedCount: failed.length,
       emails,
     });
   } catch (error) {
@@ -190,10 +193,14 @@ export const cancelEmailController = async (
 
       const updatedEmail = await prisma.email.update({
         where: { id },
-        data: {
-          status: "CANCELLED",
-        },
+        data: { status: "CANCELLED" },
       });
+
+      try {
+        await updateEmailIndex(id, { status: "CANCELLED" });
+      } catch (error) {
+        console.warn("Failed to update cancelled email in Elasticsearch:", error);
+      }
 
       return res.json({
         success: true,
@@ -205,9 +212,13 @@ export const cancelEmailController = async (
 
     // Sent or failed email → permanently delete it
     if (email.status === "SENT" || email.status === "FAILED") {
-      await prisma.email.delete({
-        where: { id },
-      });
+      await prisma.email.delete({ where: { id } });
+
+      try {
+        await deleteEmailIndex(id);
+      } catch (error) {
+        console.warn("Failed to delete email from Elasticsearch:", error);
+      }
 
       return res.json({
         success: true,
@@ -351,6 +362,40 @@ export async function scheduleBulkEmailsController(
         error instanceof Error
           ? error.message
           : "Failed to schedule emails",
+    });
+  }
+}
+
+export async function searchEmailsController(
+  req: Request,
+  res: Response
+) {
+  try {
+    const query = String(req.query.q || "");
+    const senderEmail = req.query.senderEmail
+      ? String(req.query.senderEmail)
+      : undefined;
+
+    if (!query.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is required",
+      });
+    }
+
+    const emails = await searchEmails(query, senderEmail);
+
+    return res.json({
+      success: true,
+      count: emails.length,
+      emails,
+    });
+  } catch (error) {
+    console.error("Search emails error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to search emails",
     });
   }
 }

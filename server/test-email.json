@@ -1,0 +1,8 @@
+﻿{
+  "senderEmail": "test@gmail.com",
+  "senderName": "Test",
+  "recipient": "abc@gmail.com",
+  "subject": "SearchTest",
+  "body": "hello elasticsearch",
+  "scheduledAt": "2026-09-06T12:00:00.000Z"
+}

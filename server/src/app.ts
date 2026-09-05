@@ -75,6 +75,49 @@ app.post("/test-queue", async (_req, res) => {
   }
 });
 
+
+// Live BullMQ queue status API
+app.get("/api/queue/status", async (_req, res) => {
+  try {
+    const counts = await emailQueue.getJobCounts(
+      "waiting",
+      "active",
+      "delayed",
+      "completed",
+      "failed"
+    );
+    const jobs = await emailQueue.getJobs(["waiting", "active", "delayed", "failed"], 0, 49, false);
+    res.json({
+      success: true,
+      queue: "email-scheduler",
+      counts,
+      jobs: jobs.map((job) => ({
+        id: job.id,
+        name: job.name,
+        state: undefined,
+        recipient: job.data?.recipient,
+        emailId: job.data?.emailId,
+        timestamp: job.timestamp,
+        delay: job.delay,
+        attemptsMade: job.attemptsMade,
+        failedReason: job.failedReason || null,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to load queue status" });
+  }
+});
+
+// Lightweight live BullMQ dashboard (auto-refreshes every 2 seconds)
+app.get("/admin/queues", (_req, res) => {
+  res.type("html").send(`<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReachInbox BullMQ Dashboard</title>
+<style>body{font-family:system-ui;background:#0b0f14;color:#e5e7eb;margin:0;padding:24px}.wrap{max-width:1100px;margin:auto}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}.card,.panel{background:#111827;border:1px solid #263244;border-radius:12px;padding:16px}.n{font-size:28px;font-weight:700}.label{color:#94a3b8;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;padding:10px;border-bottom:1px solid #263244;font-size:13px}th{color:#94a3b8}h1{margin-top:0}</style></head>
+<body><div class="wrap"><h1>ReachInbox BullMQ Dashboard</h1><p id="updated" class="label"></p><div id="cards" class="cards"></div><div class="panel" style="margin-top:16px"><h3>Current jobs</h3><table><thead><tr><th>ID</th><th>Recipient</th><th>Attempts</th><th>Failure</th></tr></thead><tbody id="jobs"></tbody></table></div></div>
+<script>async function load(){try{const r=await fetch('/api/queue/status');const d=await r.json();const c=d.counts||{};document.getElementById('cards').innerHTML=['waiting','active','delayed','completed','failed'].map(k=>'<div class="card"><div class="n">'+(c[k]||0)+'</div><div class="label">'+k.toUpperCase()+'</div></div>').join('');document.getElementById('jobs').innerHTML=(d.jobs||[]).map(j=>'<tr><td>'+String(j.id||'')+'</td><td>'+String(j.recipient||'-')+'</td><td>'+j.attemptsMade+'</td><td>'+String(j.failedReason||'-')+'</td></tr>').join('');document.getElementById('updated').textContent='Updated: '+new Date().toLocaleTimeString();}catch(e){document.getElementById('updated').textContent='Dashboard error: '+e.message}}load();setInterval(load,2000);</script></body></html>`);
+});
+
 app.use("/api/emails", emailRoutes);
 app.use("/api/auth", authRoutes);
 

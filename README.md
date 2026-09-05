@@ -61,7 +61,7 @@ A full-stack email scheduling application for sending individual and bulk emails
 ```text
 ReachInbox/
 │
-├── backend/
+├── server/
 │   ├── src/
 │   │   ├── config/
 │   │   ├── controllers/
@@ -72,7 +72,7 @@ ReachInbox/
 │   ├── prisma/
 │   └── package.json
 │
-├── frontend/
+├── client/
 │   ├── src/
 │   └── package.json
 │
@@ -92,7 +92,7 @@ Redis
 The project requires 3 terminals.
 
 ** Terminal 1 — Backend **
-cd backend
+cd server
 npm install
 npm run dev
 
@@ -102,7 +102,7 @@ This starts the Express backend server.
 
 Open a second terminal:
 
-cd backend
+cd server
 npm run worker
 
 You should see:
@@ -115,7 +115,7 @@ The worker processes scheduled emails in the background.
 
 Open a third terminal:
 
-cd frontend
+cd client
 npm install
 npm run dev
 
@@ -127,7 +127,7 @@ Backend
 
 Create:
 
-backend/.env
+server/.env
 
 Add:
 
@@ -142,17 +142,17 @@ GOOGLE_CLIENT_ID="your_google_client_id"
 
 JWT_SECRET="your_jwt_secret"
 
-ETHEREAL_HOST="smtp.ethereal.email"
-ETHEREAL_PORT=587
-ETHEREAL_USER="your_ethereal_username"
-ETHEREAL_PASSWORD="your_ethereal_password"
+SMTP_HOST="smtp.ethereal.email"
+SMTP_PORT=587
+SMTP_USER="your_ethereal_username"
+SMTP_PASS="your_ethereal_password"
 
 WORKER_CONCURRENCY=5
 Frontend
 
 Create the required frontend environment file:
 
-frontend/.env
+client/.env
 
 Example:
 
@@ -169,7 +169,7 @@ DATABASE_URL="your_postgresql_connection_string"
 
 Then run:
 
-cd backend
+cd server
 npx prisma generate
 npx prisma migrate dev
 Ethereal Email Setup
@@ -178,11 +178,11 @@ The application uses Ethereal Email + Nodemailer for testing email delivery.
 
 Add your Ethereal SMTP credentials to:
 
-backend/.env
-ETHEREAL_HOST="smtp.ethereal.email"
-ETHEREAL_PORT=587
-ETHEREAL_USER="your_ethereal_username"
-ETHEREAL_PASSWORD="your_ethereal_password"
+server/.env
+SMTP_HOST="smtp.ethereal.email"
+SMTP_PORT=587
+SMTP_USER="your_ethereal_username"
+SMTP_PASS="your_ethereal_password"
 
 After sending an email, the worker generates an Ethereal Preview URL that can be opened to view the test email.
 
@@ -350,3 +350,13 @@ git push
 <img width="1008" height="571" alt="image" src="https://github.com/user-attachments/assets/bba1f0e0-4861-4a51-addc-f314ea0bbe9c" />
 
 
+
+
+## BullMQ Dashboard
+
+With the backend running, open `http://localhost:5000/admin/queues` for a live queue dashboard. The page refreshes every 2 seconds and shows waiting, active, delayed, completed, and failed jobs.
+
+
+## Deployment URL convention
+
+Set `VITE_API_URL` to the backend origin only, for example `https://your-backend.onrender.com`. Do not append `/api` to `VITE_API_URL`; the frontend adds `/api` to each backend route.

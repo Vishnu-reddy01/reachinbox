@@ -10,6 +10,7 @@
     "worker": "tsx watch src/workers/email.worker.ts"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.19.2",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bullmq": "^6.3.4",

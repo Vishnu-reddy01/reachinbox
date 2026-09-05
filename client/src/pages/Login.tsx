@@ -18,7 +18,7 @@ function Login({ onLogin }: LoginProps) {
     console.log("Google credential received");
 
     const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}/auth/google`,
+      `${(import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/$/, "")}/api/auth/google`,
       {
         credential: credentialResponse.credential,
       }

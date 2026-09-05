@@ -1,5 +1,6 @@
 import { emailQueue } from "../queues/email.queue.js";
 import prisma from "../config/database.js";
+import { indexEmail } from "./elasticsearch.service.js";
 
 interface ScheduleEmailInput {
   senderEmail: string;
@@ -62,6 +63,27 @@ export async function scheduleEmail(input: ScheduleEmailInput) {
       status: "SCHEDULED",
     },
   });
+
+  // Search indexing must never prevent scheduling. PostgreSQL + BullMQ are the source of truth.
+  try {
+    await indexEmail({
+      id: email.id,
+      senderEmail: input.senderEmail,
+      recipient: email.recipient,
+      subject: email.subject,
+      body: email.body,
+      status: email.status,
+      scheduledAt: email.scheduledAt,
+      sentAt: email.sentAt,
+      createdAt: email.createdAt,
+    });
+    console.log("Email indexed in Elasticsearch:", email.id);
+  } catch (error) {
+    console.warn(
+      "Elasticsearch indexing failed; email will still be scheduled:",
+      error instanceof Error ? error.message : error
+    );
+  }
 
   const delay = scheduledDate.getTime() - Date.now();
 

@@ -31,6 +31,7 @@ function Icon({
 }: {
   name:
     | "dashboard"
+    | "search"
     | "clock"
     | "send"
     | "settings"
@@ -69,6 +70,15 @@ function Icon({
     );
   }
 
+  if (name === "search") {
+    return (
+      <svg {...common}>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-4-4" />
+      </svg>
+    );
+  }
+
   if (name === "clock") {
     return (
       <svg {...common}>
@@ -91,7 +101,7 @@ function Icon({
     return (
       <svg {...common}>
         <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.5 1.5-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-2.1v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.5-1.5.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H7v-2.1h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.5-1.5.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4H15v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.5 1.5-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v2.1h-.2a1.7 1.7 0 0 0-1.2 1.1Z" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.5 1.5-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-2.1v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.5-1.5.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H7v-2.1h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.5-1.5.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4H15v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.5 1.5-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2v2.1h-.2a1.7 1.7 0 0 0-1.1 1.2Z" />
       </svg>
     );
   }
@@ -209,6 +219,10 @@ function Dashboard({ user, onLogout }: DashboardProps) {
   const [scheduledEmails, setScheduledEmails] = useState<Email[]>([]);
   const [sentEmails, setSentEmails] = useState<Email[]>([]);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Email[]>([]);
+  const [searching, setSearching] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -223,6 +237,11 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
   const [leads, setLeads] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
+
+  // ================= API BASE URL =================
+
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   // ================= POPUP STATE =================
 
@@ -342,16 +361,14 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
   const fetchEmails = async () => {
     try {
+      const senderEmail = encodeURIComponent(user.email);
+
       const [scheduledResponse, sentResponse] = await Promise.all([
         fetch(
-          `${import.meta.env.VITE_API_URL}/api/emails/scheduled?senderEmail=${encodeURIComponent(
-            user.email
-          )}`
+          `${API_URL}/api/emails/scheduled?senderEmail=${senderEmail}`
         ),
         fetch(
-          `${import.meta.env.VITE_API_URL}/api/emails/sent?senderEmail=${encodeURIComponent(
-            user.email
-          )}`
+          `${API_URL}/api/emails/sent?senderEmail=${senderEmail}`
         ),
       ]);
 
@@ -361,6 +378,9 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
       const scheduledData = await scheduledResponse.json();
       const sentData = await sentResponse.json();
+
+      console.log("Scheduled emails:", scheduledData);
+      console.log("Sent emails:", sentData);
 
       setScheduledEmails(scheduledData.emails || []);
       setSentEmails(sentData.emails || []);
@@ -378,7 +398,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
       async () => {
         try {
           const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/api/emails/${emailId}`,
+            `${API_URL}/api/emails/${emailId}`,
             {
               method: "DELETE",
             }
@@ -419,6 +439,47 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
     return () => clearInterval(interval);
   }, [user.email]);
+
+  // ================= SEARCH =================
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+
+    if (!query) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true);
+
+        const response = await fetch(
+          `${API_URL}/api/emails/search?q=${encodeURIComponent(
+            query
+          )}&senderEmail=${encodeURIComponent(user.email)}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Search request failed");
+        }
+
+        const data = await response.json();
+
+        setSearchResults(
+          Array.isArray(data.emails) ? data.emails : []
+        );
+      } catch (error) {
+        console.error("Email search failed:", error);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, user.email]);
 
   // ================= FILE UPLOAD =================
 
@@ -525,7 +586,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
     try {
       const response = await fetch(
-       `${import.meta.env.VITE_API_URL}/api/emails/schedule-bulk`,
+        `${API_URL}/api/emails/schedule-bulk`,
         {
           method: "POST",
           headers: {
@@ -588,8 +649,21 @@ function Dashboard({ user, onLogout }: DashboardProps) {
     }
   };
 
-  const emails =
-    activeTab === "scheduled" ? scheduledEmails : sentEmails;
+  // ================= FILTER EMAILS =================
+
+  const baseEmails =
+    activeTab === "scheduled"
+      ? scheduledEmails
+      : sentEmails;
+
+  const emails = searchQuery.trim()
+    ? searchResults.filter((email) =>
+        activeTab === "scheduled"
+          ? email.status === "SCHEDULED"
+          : email.status === "SENT" ||
+            email.status === "FAILED"
+      )
+    : baseEmails;
 
   return (
     <>
@@ -713,10 +787,6 @@ function Dashboard({ user, onLogout }: DashboardProps) {
           border-color: #bfdbfe !important;
         }
 
-        .reachinbox-light .divide-\\[\\#1c2229\\] > :not([hidden]) ~ :not([hidden]) {
-          border-color: #e5e7eb !important;
-        }
-
         .reachinbox-light .text-white {
           color: #111827 !important;
         }
@@ -835,30 +905,12 @@ function Dashboard({ user, onLogout }: DashboardProps) {
           color: #9ca3af !important;
         }
 
-        .reachinbox-light .hover\\:bg-\\[\\#11151b\\]:hover {
-          background-color: #f1f5f9 !important;
-        }
-
-        .reachinbox-light .hover\\:bg-\\[\\#151a20\\]:hover,
-        .reachinbox-light .hover\\:bg-\\[\\#151a21\\]:hover,
-        .reachinbox-light .hover\\:bg-\\[\\#171c22\\]:hover {
-          background-color: #f1f5f9 !important;
-        }
-
-        .reachinbox-light .hover\\:bg-\\[\\#10151b\\]:hover {
-          background-color: #f8fafc !important;
-        }
-
-        .reachinbox-light .hover\\:border-\\[\\#2a323c\\]:hover,
-        .reachinbox-light .hover\\:border-\\[\\#39424d\\]:hover {
-          border-color: #cbd5e1 !important;
-        }
-
         @keyframes popupSlideIn {
           from {
             opacity: 0;
             transform: translateY(-15px) scale(0.97);
           }
+
           to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -995,7 +1047,9 @@ function Dashboard({ user, onLogout }: DashboardProps) {
           <div className="h-[82px] px-7 flex items-center border-b border-[#1d2229]">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-[10px] bg-[#3b82f6] flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <span className="font-bold text-white text-lg">R</span>
+                <span className="font-bold text-white text-lg">
+                  R
+                </span>
               </div>
 
               <div>
@@ -1119,7 +1173,9 @@ function Dashboard({ user, onLogout }: DashboardProps) {
         <div className="flex-1 min-w-0">
           <header className="h-[82px] border-b border-[#1d2229] bg-[#090b0f] flex items-center justify-between px-8">
             <div>
-              <p className="text-xs text-[#656d78]">Workspace</p>
+              <p className="text-xs text-[#656d78]">
+                Workspace
+              </p>
 
               <p className="text-sm font-medium text-[#cbd0d7] mt-1">
                 Email Campaigns
@@ -1172,13 +1228,16 @@ function Dashboard({ user, onLogout }: DashboardProps) {
           </header>
 
           <main className="px-8 py-8 max-w-[1400px] mx-auto">
+            {/* ================= PAGE TITLE ================= */}
+
             <div className="mb-7">
               <p className="text-[12px] font-medium text-[#66707d] mb-2">
                 OVERVIEW
               </p>
 
               <h2 className="text-[30px] leading-tight font-semibold tracking-[-0.035em] text-[#f3f4f6]">
-                Good morning, {user.name?.split(" ")[0] || "there"}! 👋
+                Good morning,{" "}
+                {user.name?.split(" ")[0] || "there"}! 👋
               </h2>
 
               <p className="text-sm text-[#707984] mt-2">
@@ -1262,7 +1321,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
               </div>
             </div>
 
-            {/* ================= EMAIL PANEL ================= */}
+            {/* ================= EMAIL ACTIVITY ================= */}
 
             <section className="rounded-[14px] border border-[#20262e] bg-[#0d1116] overflow-hidden">
               <div className="px-5 pt-5">
@@ -1285,6 +1344,53 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                     <Icon name="refresh" size={16} />
                   </button>
                 </div>
+
+                {/* ================= SEARCH ================= */}
+
+                <div className="mt-5">
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#68717d] pointer-events-none">
+                      <Icon name="search" size={16} />
+                    </div>
+
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) =>
+                        setSearchQuery(e.target.value)
+                      }
+                      placeholder="Search recipient, subject, body or sender..."
+                      className="w-full h-11 bg-[#090c10] border border-[#252c34] rounded-[9px] pl-10 pr-10 text-[12px] text-white outline-none focus:border-[#3b82f6] transition"
+                    />
+
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        title="Clear search"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#68717d] hover:text-white transition"
+                      >
+                        <Icon name="close" size={15} />
+                      </button>
+                    )}
+                  </div>
+
+                  {searching && (
+                    <p className="text-[10px] text-[#68717d] mt-1.5">
+                      Searching...
+                    </p>
+                  )}
+
+                  {!searching &&
+                    searchQuery.trim() &&
+                    searchResults.length === 0 && (
+                      <p className="text-[10px] text-[#68717d] mt-1.5">
+                        No matching emails found.
+                      </p>
+                    )}
+                </div>
+
+                {/* ================= TABS ================= */}
 
                 <div className="flex items-center gap-6 mt-5 border-b border-[#20262e]">
                   <button
@@ -1319,6 +1425,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                 </div>
               </div>
 
+              {/* ================= EMAIL LIST ================= */}
+
               {emails.length === 0 ? (
                 <div className="py-24 text-center px-6">
                   <div className="mx-auto w-14 h-14 rounded-[14px] border border-[#242b34] bg-[#11161c] flex items-center justify-center text-[#59626e]">
@@ -1326,24 +1434,29 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                   </div>
 
                   <h3 className="text-[15px] font-semibold text-[#dfe2e7] mt-5">
-                    No emails found
+                    {searchQuery.trim()
+                      ? "No emails found"
+                      : "No emails found"}
                   </h3>
 
                   <p className="text-[12px] text-[#626b76] mt-2 max-w-sm mx-auto">
-                    {activeTab === "scheduled"
+                    {searchQuery.trim()
+                      ? "Try searching with a different recipient, subject or sender."
+                      : activeTab === "scheduled"
                       ? "Schedule your first email to get started."
                       : "Sent emails will appear here."}
                   </p>
 
-                  {activeTab === "scheduled" && (
-                    <button
-                      onClick={() => setShowForm(true)}
-                      className="mt-6 h-10 px-4 rounded-[9px] bg-[#2563eb] hover:bg-[#1d4ed8] transition text-[12px] font-semibold inline-flex items-center gap-2"
-                    >
-                      <Icon name="plus" size={15} />
-                      Schedule your first email
-                    </button>
-                  )}
+                  {activeTab === "scheduled" &&
+                    !searchQuery.trim() && (
+                      <button
+                        onClick={() => setShowForm(true)}
+                        className="mt-6 h-10 px-4 rounded-[9px] bg-[#2563eb] hover:bg-[#1d4ed8] transition text-[12px] font-semibold inline-flex items-center gap-2"
+                      >
+                        <Icon name="plus" size={15} />
+                        Schedule your first email
+                      </button>
+                    )}
                 </div>
               ) : (
                 <div className="divide-y divide-[#1c2229]">
@@ -1375,6 +1488,12 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                           <p className="text-[11px] text-[#68717d] mt-1.5">
                             To: {email.recipient}
                           </p>
+
+                          {email.senderEmail && (
+                            <p className="text-[10px] text-[#555e69] mt-1">
+                              From: {email.senderEmail}
+                            </p>
+                          )}
                         </div>
 
                         <span className="shrink-0 text-[10px] text-[#626b76]">
@@ -1488,6 +1607,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                   </div>
                 </div>
 
+                {/* ================= EMAIL LEADS ================= */}
+
                 <div>
                   <label className="block text-[11px] font-medium text-[#aeb5be] mb-2">
                     Email Leads
@@ -1524,7 +1645,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
 
                           <p className="text-[10px] text-[#66778b] mt-1">
                             {leads.length} email address
-                            {leads.length !== 1 ? "es" : ""} detected
+                            {leads.length !== 1 ? "es" : ""}{" "}
+                            detected
                           </p>
                         </div>
 
@@ -1533,6 +1655,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                     </div>
                   )}
                 </div>
+
+                {/* ================= SUBJECT ================= */}
 
                 <div>
                   <label className="block text-[11px] font-medium text-[#aeb5be] mb-2">
@@ -1552,6 +1676,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                     placeholder="Email subject"
                   />
                 </div>
+
+                {/* ================= MESSAGE ================= */}
 
                 <div>
                   <label className="block text-[11px] font-medium text-[#aeb5be] mb-2">
@@ -1573,6 +1699,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                   />
                 </div>
 
+                {/* ================= DATE & TIME ================= */}
+
                 <div>
                   <label className="block text-[11px] font-medium text-[#aeb5be] mb-2">
                     Schedule Date & Time
@@ -1592,7 +1720,9 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                       className="w-full h-11 bg-[#090c10] border border-[#252c34] rounded-[9px] px-3.5 text-left text-[12px] text-white outline-none hover:border-[#3b82f6] focus:border-[#3b82f6] transition cursor-pointer"
                     >
                       {form.scheduledAt
-                        ? new Date(form.scheduledAt).toLocaleString([], {
+                        ? new Date(
+                            form.scheduledAt
+                          ).toLocaleString([], {
                             year: "numeric",
                             month: "short",
                             day: "numeric",
@@ -1617,6 +1747,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                     />
                   </div>
                 </div>
+
+                {/* ================= DELAY / LIMIT ================= */}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1666,6 +1798,8 @@ function Dashboard({ user, onLogout }: DashboardProps) {
                     />
                   </div>
                 </div>
+
+                {/* ================= ACTIONS ================= */}
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-[#20262e]">
                   <button
