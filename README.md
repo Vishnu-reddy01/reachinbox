@@ -1,362 +1,219 @@
-# ReachInbox Email Scheduler
+# ReachInbox - Full Stack Email Scheduler
 
-A full-stack email scheduling application for sending individual and bulk emails with scheduling, rate limiting, background processing, and email tracking.
+A full-stack email scheduling system built for the ReachInbox hiring assignment.
 
 ## Tech Stack
+
+### Backend
+- TypeScript
+- Express.js
+- BullMQ
+- Redis
+- PostgreSQL/MySQL
+- Elasticsearch
+- Nodemailer
+- Ethereal Email
 
 ### Frontend
 - React
 - TypeScript
-- Vite
 - Tailwind CSS
-- Axios
-- Google OAuth
-- Lucide React
-
-### Backend
-- Node.js
-- Express
-- TypeScript
-- Prisma
-- PostgreSQL
-- Redis
-- BullMQ
-- Nodemailer
-- Ethereal Email
 
 ---
 
-## Features
+# Features
 
-### Backend
-- Email scheduling
-- Bulk email scheduling
-- PostgreSQL persistence
-- Redis + BullMQ job queue
-- Background email worker
-- Configurable email delay
-- Configurable hourly limit
-- Worker concurrency
-- Email cancellation
-- Email status tracking
-- Retry handling
+## Backend
 
-### Frontend
-- Google Login
+- Email scheduling API
+- BullMQ delayed jobs
+- Redis-backed persistent queue
+- Database persistence
+- Configurable worker concurrency
+- Configurable delay between email sends
+- Configurable hourly email rate limit
+- Multiple email senders
+- Idempotent email processing
+- Elasticsearch indexing/search
+- BullMQ queue monitoring
+- Ethereal Email SMTP integration
+- Restart-safe scheduled jobs
+
+## Frontend
+
+- Google OAuth login
+- User profile
 - Dashboard
-- Compose Email
-- CSV recipient upload
-- Date & time scheduling
-- Delay configuration
-- Hourly limit configuration
 - Scheduled Emails table
 - Sent Emails table
-- Cancel scheduled email
-- Email status tracking
+- Compose Email modal
+- CSV/text lead upload
+- Email address parsing
+- Scheduled start time
+- Configurable delay
+- Configurable hourly limit
+- Loading states
+- Empty states
+- Error handling
+- Logout
 
 ---
 
-# Project Structure
+# Architecture
 
 ```text
-ReachInbox/
-│
-├── server/
-│   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── queues/
-│   │   ├── services/
-│   │   ├── workers/
-│   │   └── server.ts
-│   ├── prisma/
-│   └── package.json
-│
-├── client/
-│   ├── src/
-│   └── package.json
-│
-├── README.md
-└── .gitignore
-Setup
-Prerequisites
+React Frontend
+       |
+       v
+Express REST API
+       |
+       +--------> PostgreSQL/MySQL
+       |
+       +--------> Redis
+       |             |
+       |             v
+       |          BullMQ
+       |             |
+       |             v
+       |          Worker
+       |             |
+       |             v
+       |        Ethereal SMTP
+       |
+       +--------> Elasticsearch
+Scheduling
 
-Install:
+## When an email is scheduled:
 
-Node.js
-npm
-PostgreSQL
-Redis
-## **⚡ Running the Project **
-
-The project requires 3 terminals.
-
-** Terminal 1 — Backend **
-cd server
-npm install
-npm run dev
-
-This starts the Express backend server.
-
-** Terminal 2 — BullMQ Worker **
-
-Open a second terminal:
-
-cd server
-npm run worker
-
-You should see:
-
-Email worker started
-
-The worker processes scheduled emails in the background.
-
-** Terminal 3 — Frontend **
-
-Open a third terminal:
-
-cd client
-npm install
-npm run dev
-
-Open the URL shown by Vite, usually:
-
-http://localhost:5173
-Environment Variables
-Backend
-
-Create:
-
-server/.env
-
-Add:
-
-PORT=5000
-
-DATABASE_URL="your_postgresql_connection_string"
-
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-GOOGLE_CLIENT_ID="your_google_client_id"
-
-JWT_SECRET="your_jwt_secret"
-
-SMTP_HOST="smtp.ethereal.email"
-SMTP_PORT=587
-SMTP_USER="your_ethereal_username"
-SMTP_PASS="your_ethereal_password"
-
-WORKER_CONCURRENCY=5
-Frontend
-
-Create the required frontend environment file:
-
-client/.env
-
-Example:
-
-VITE_API_URL=http://localhost:5000
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
-
-Never commit .env files or credentials to GitHub.
-
-Database Setup
-
-Configure PostgreSQL and set:
-
-DATABASE_URL="your_postgresql_connection_string"
-
-Then run:
-
-cd server
-npx prisma generate
-npx prisma migrate dev
-Ethereal Email Setup
-
-The application uses Ethereal Email + Nodemailer for testing email delivery.
-
-Add your Ethereal SMTP credentials to:
-
-server/.env
-SMTP_HOST="smtp.ethereal.email"
-SMTP_PORT=587
-SMTP_USER="your_ethereal_username"
-SMTP_PASS="your_ethereal_password"
-
-After sending an email, the worker generates an Ethereal Preview URL that can be opened to view the test email.
-
-Architecture
-Frontend
-   │
-   ▼
-Express API
-   │
-   ├──────────────► PostgreSQL
-   │                    │
-   │                    ▼
-   │                 Prisma
-   │
-   ▼
-BullMQ
-   │
-   ▼
-Redis
-   │
-   ▼
-Email Worker
-   │
-   ▼
-Nodemailer
-   │
-   ▼
-Ethereal Email
-How Scheduling Works
-User selects recipients and schedule time.
 Frontend sends the request to the backend.
-Backend stores the email in PostgreSQL.
-A delayed BullMQ job is added to Redis.
-Worker waits for the scheduled job.
-Worker sends the email using Nodemailer.
-Email status is updated to SENT.
-Status Flow
-SCHEDULED → PROCESSING → SENT
-                         │
-                         └── FAILED
-
-Scheduled emails can also be cancelled:
-
-SCHEDULED → CANCELLED
+Backend stores the email in the database.
+Backend creates a delayed BullMQ job.
+BullMQ keeps the job in Redis until the scheduled time.
+Worker processes the job when it becomes available.
+Email is sent through Ethereal SMTP.
+Database status is updated to sent or failed.
+Email information is indexed in Elasticsearch.
 Persistence
 
-Email records are stored in PostgreSQL using Prisma.
+BullMQ stores delayed jobs in Redis instead of keeping them only in application memory.
 
-Scheduled jobs are stored in Redis through BullMQ.
+Therefore, restarting the Express server does not remove future jobs.
 
-Therefore, scheduling does not depend only on frontend or in-memory state.
-
-Rate Limiting
-
-Bulk emails support:
-
-Delay between emails
-Hourly sending limit
-
-Example:
-
-Hourly Limit = 50
-
-Emails 1–50   → First hour
-Emails 51–100 → Second hour
-
-Each email within an hour can also use the configured delay.
+The email status is also stored in the database, allowing the worker to determine whether an email has already been processed.
 
 Concurrency
 
-The BullMQ worker supports configurable concurrency.
+Worker concurrency is configurable through environment variables.
 
-Default:
+Example:
 
 WORKER_CONCURRENCY=5
 
-This allows multiple email jobs to be processed concurrently.
+This allows multiple jobs to be processed concurrently while keeping the value configurable.
 
-Retry Handling
+Email Delay
 
-BullMQ is configured with:
+A minimum delay between email sends is configured through environment variables.
 
-Attempts: 3
-Backoff: Exponential
-Delay: 5000 ms
+Example:
 
-Failed jobs are retried automatically before being marked as failed.
+EMAIL_DELAY_MS=2000
 
-Bulk Email Flow
-CSV Upload
-    ↓
-Extract Emails
-    ↓
-Remove Duplicates
-    ↓
-Select Schedule
-    ↓
-Apply Delay + Hourly Limit
-    ↓
-Create BullMQ Jobs
-    ↓
-Worker Sends Emails
-Available Scripts
-Backend
+This helps simulate provider throttling.
+
+Rate Limiting
+
+Hourly email limits are configurable through environment variables.
+
+Example:
+
+MAX_EMAILS_PER_HOUR=200
+
+Redis-backed rate-limit state is used so that limits can be shared across workers/instances.
+
+When the hourly limit is reached, jobs are delayed/rescheduled instead of being permanently dropped.
+
+Idempotency
+
+Before sending an email, the worker checks the persisted email status.
+
+Already sent emails are not sent again.
+
+Environment Variables
+
+Create a .env file in the backend:
+
+PORT=5000
+
+DATABASE_URL=your_database_url
+
+REDIS_URL=redis://localhost:6379
+
+ELASTICSEARCH_URL=http://localhost:9200
+ELASTICSEARCH_API_KEY=your_api_key
+
+ETHEREAL_HOST=smtp.ethereal.email
+ETHEREAL_PORT=587
+ETHEREAL_USER=your_ethereal_username
+ETHEREAL_PASSWORD=your_ethereal_password
+
+WORKER_CONCURRENCY=5
+EMAIL_DELAY_MS=2000
+MAX_EMAILS_PER_HOUR=200
+
+Use the actual environment variable names from the backend code if they differ.
+
+Ethereal Email Setup
+Visit https://ethereal.email/
+Create a test account.
+Copy the SMTP username and password.
+Add the credentials to the backend .env.
+Start the backend and worker.
+Scheduled emails will be sent through Ethereal SMTP.
+The generated preview URL can be used to inspect test emails.
+## Backend Setup
+cd backend
+npm install
+
+Start Redis and database.
+
+Then:
+
 npm run dev
 
-Start development server.
+Start the BullMQ worker using the project's worker command.
+
+Example:
 
 npm run worker
-
-Start BullMQ email worker.
-
-npm run build
-
-Build backend.
-
-npm start
-
-Start production backend.
-
-Frontend
+## Frontend Setup
+cd frontend
+npm install
 npm run dev
 
-Start development server.
+Open the frontend in the browser.
 
-npm run build
+Docker
 
-Build frontend.
+If Docker Compose is provided:
 
-npm run preview
+docker compose up -d
 
-Preview production build.
+This starts the required infrastructure such as Redis and the database.
 
-Feature Mapping
-Area	Features
-Backend	Scheduler, persistence, rate limiting, concurrency, BullMQ worker, cancellation, retries
-Frontend	Google Login, Dashboard, Compose, CSV upload, scheduling, tables, status tracking
-Email	Nodemailer, Ethereal SMTP, preview URLs
-Queue	Redis + BullMQ
-Security
-Environment variables are used for secrets.
-.env files are excluded from Git.
-Google credentials are verified on the backend.
-Database and SMTP credentials are not stored in source code.
-License
+Demo
 
-This project was created as a technical assessment/project implementation.
+The demo video demonstrates:
 
-
-### After adding the README
-
-Run:
-
-```bash
-git add README.md
-git commit -m "Add README documentation"
-git push
-
-
-
-
-<img width="1031" height="862" alt="image" src="https://github.com/user-attachments/assets/064a147d-0019-4be8-a7b4-70f092e087ac" />
-
-<img width="1033" height="867" alt="image" src="https://github.com/user-attachments/assets/983d9e83-989c-4f1f-8986-805ccea17b95" />
-<img width="1008" height="571" alt="image" src="https://github.com/user-attachments/assets/bba1f0e0-4861-4a51-addc-f314ea0bbe9c" />
-
-
-
-
-## BullMQ Dashboard
-
-With the backend running, open `http://localhost:5000/admin/queues` for a live queue dashboard. The page refreshes every 2 seconds and shows waiting, active, delayed, completed, and failed jobs.
-
-
-## Deployment URL convention
-
-Set `VITE_API_URL` to the backend origin only, for example `https://your-backend.onrender.com`. Do not append `/api` to `VITE_API_URL`; the frontend adds `/api` to each backend route.
+Creating scheduled emails.
+Uploading email leads.
+Viewing scheduled emails.
+Viewing sent emails.
+Restarting the backend.
+Confirming that future scheduled emails are preserved.
+Assumptions / Trade-offs
+Ethereal Email is used as a test SMTP provider and does not deliver production emails.
+Rate limits and delays are configurable through environment variables.
+The implementation prioritizes reliability and clear architecture for the assignment.
+Google OAuth and Slack integration require their respective credentials/configuration.
+Elasticsearch is used for email indexing and searchability.
