@@ -1236,7 +1236,7 @@ function Dashboard({ user, onLogout }: DashboardProps) {
               </p>
 
               <h2 className="text-[30px] leading-tight font-semibold tracking-[-0.035em] text-[#f3f4f6]">
-                Good morning,{" "}
+                Hello ,{" "}
                 {user.name?.split(" ")[0] || "there"}! 👋
               </h2>
 
