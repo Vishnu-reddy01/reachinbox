@@ -7,20 +7,30 @@ export async function getEmailTransporter() {
     return transporter;
   }
 
-  const testAccount = await nodemailer.createTestAccount();
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
 
-  console.log("Ethereal account created:");
-  console.log("Email:", testAccount.user);
+  if (!host || !user || !pass) {
+    throw new Error(
+      "SMTP_HOST, SMTP_USER, or SMTP_PASS is not defined"
+    );
+  }
 
   transporter = nodemailer.createTransport({
-    host: testAccount.smtp.host,
-    port: testAccount.smtp.port,
-    secure: testAccount.smtp.secure,
+    host,
+    port,
+    secure: port === 465,
     auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
+      user,
+      pass,
     },
   });
+
+  await transporter.verify();
+
+  console.log("SMTP connection verified successfully");
 
   return transporter;
 }

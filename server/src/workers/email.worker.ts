@@ -3,7 +3,7 @@ import redis from "../config/redis.js";
 import { EMAIL_QUEUE_NAME } from "../queues/email.queue.js";
 import { getEmailTransporter } from "../config/email.js";
 import prisma from "../config/database.js";
-import nodemailer from "nodemailer";
+
 
 const emailWorker = new Worker(
   EMAIL_QUEUE_NAME,
@@ -43,7 +43,7 @@ const emailWorker = new Worker(
         html: `<p>${body}</p>`,
       });
 
-      const previewUrl = nodemailer.getTestMessageUrl(info);
+      
 
       // Mark email as sent
       await prisma.email.update({
@@ -60,14 +60,12 @@ const emailWorker = new Worker(
       console.log("Email sent successfully!");
       console.log("Message ID:", info.messageId);
 
-      if (previewUrl) {
-        console.log("Ethereal Preview URL:", previewUrl);
-      }
+      
 
       return {
         success: true,
         messageId: info.messageId,
-        previewUrl,
+        
       };
     } catch (error) {
       // Mark email as failed
